@@ -4,19 +4,23 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.media.SoundPool;
+import android.os.Handler;
+import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.bootisdev.reflex.R;
+
 import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.logging.Handler;
 
 public class ReflexView extends View {
     // preferences
@@ -73,5 +77,78 @@ public class ReflexView extends View {
 
     public ReflexView(Context context, SharedPreferences sharedPreferences, RelativeLayout parentLayout) {
         super(context);
+
+        this.sharedPreferences = sharedPreferences;
+        highScore = sharedPreferences.getInt(HIGH_SCORE, 0);
+
+        // save resources for loading external values
+        resources = context.getResources();
+
+        // save layoutInflater
+        layoutInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+
+        // setup UI components
+        relativeLayout = parentLayout;
+        lifeLinearLayout = relativeLayout.findViewById(R.id.lifeLinearLayout);
+        highScoreTextView = relativeLayout.findViewById(R.id.highScoreTextView);
+        currentScoreTextView = relativeLayout.findViewById(R.id.scoreTextView);
+        levelTextView = relativeLayout.findViewById(R.id.levelTextView);
+
+//        spotHandler = new Handler();
+
+        addNewSpot();
+    }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        viewWidth = w;
+        viewHeight = h;
+    }
+
+    public void addNewSpot() {
+        // create a new spot
+        final ImageView spot = (ImageView) layoutInflater.inflate(R.layout.untouched, null);
+
+        spots.add(spot);
+
+        spot.setLayoutParams(new RelativeLayout.LayoutParams(SPOT_DIAMETER, SPOT_DIAMETER));
+
+        DisplayMetrics metrics = new DisplayMetrics();
+        WindowManager windowManager = (WindowManager) spot.getContext().getSystemService(Context.WINDOW_SERVICE);
+
+        windowManager.getDefaultDisplay().getMetrics(metrics);
+
+        int width = metrics.widthPixels;
+        int height = metrics.heightPixels;
+
+        int x = RANDOM.nextInt(width - SPOT_DIAMETER);
+        int y = RANDOM.nextInt(height - SPOT_DIAMETER);
+        int x2 = RANDOM.nextInt(width - SPOT_DIAMETER);
+        int y2 = RANDOM.nextInt(height - SPOT_DIAMETER);
+
+        spot.setImageResource(RANDOM.nextInt(2) == 0 ? R.drawable.green_spot : R.drawable.red_spot);
+        spot.setX(x);
+        spot.setY(y);
+
+        spot.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                touchedSpot(spot);
+            }
+        });
+
+        relativeLayout.addView(spot); // add spot to the screen
+    }
+
+    private void touchedSpot(ImageView spot) {
+        relativeLayout.removeView(spot);
+        spots.remove(spot);
+
+        level = 1;
+
+        ++spotsTouched; // increment number of spots touched
+        score += 10 * level;
+
+        currentScoreTextView.setText("Score: " + score);
     }
 }
